@@ -1,0 +1,204 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   مستر بيتزا — Mr Pizza  |  Design Tokens
+   نظام تصميم موحّد. لا تغيّر هذه القيم بعد الإطلاق.
+   ============================================================ */
+:root {
+  --brand-red: #e11221;
+  --brand-yellow: #ffc11e;
+  --ink: #121212;
+  --cream: #fffbf2;
+  --radius: 1rem;
+}
+
+@layer base {
+  * {
+    @apply border-line;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* RTL هو الأساس */
+  html[dir='rtl'] body {
+    direction: rtl;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display font-extrabold tracking-tight;
+  }
+
+  ::selection {
+    @apply bg-brand-yellow text-ink;
+  }
+
+  /* شريط تمرير مخصص */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-brand-red/70 rounded-full;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-line;
+  }
+}
+
+@layer components {
+  /* الحاوية الرئيسية للصفحات */
+  .container-page {
+    @apply mx-auto w-full max-w-page px-4 sm:px-6 lg:px-8;
+  }
+
+  /* الأزرار */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-bold
+           transition-all duration-200 active:scale-[0.97] focus:outline-none focus-visible:ring-4
+           focus-visible:ring-brand-yellow/40 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-brand-red text-white shadow-card hover:bg-brand-red-dark hover:shadow-card-hover;
+  }
+  .btn-accent {
+    @apply btn bg-brand-yellow text-ink shadow-card hover:bg-brand-yellow-dark;
+  }
+  .btn-dark {
+    @apply btn bg-ink text-white hover:bg-ink-soft;
+  }
+  .btn-outline {
+    @apply btn border-2 border-ink/15 bg-white text-ink hover:border-brand-red hover:text-brand-red;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink hover:bg-ink/5;
+  }
+  .btn-sm {
+    @apply px-4 py-2 text-sm;
+  }
+
+  /* البطاقات */
+  .card {
+    @apply rounded-xl2 bg-surface shadow-card ring-1 ring-line/70 overflow-hidden;
+  }
+
+  /* الشارات */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold;
+  }
+  .badge-red {
+    @apply badge bg-brand-red text-white;
+  }
+  .badge-yellow {
+    @apply badge bg-brand-yellow text-ink;
+  }
+  .badge-soft {
+    @apply badge bg-ink/5 text-ink-muted;
+  }
+
+  /* الحقول */
+  .field {
+    @apply w-full rounded-xl border-2 border-line bg-white px-4 py-3 text-base text-ink
+           placeholder:text-ink-muted/60 transition focus:border-brand-red focus:outline-none
+           focus:ring-4 focus:ring-brand-red/10;
+  }
+  .field-label {
+    @apply mb-1.5 block text-sm font-bold text-ink;
+  }
+  .field-error {
+    @apply mt-1 text-sm font-medium text-brand-red;
+  }
+
+  /* عنوان قسم */
+  .section-title {
+    @apply text-2xl sm:text-3xl lg:text-4xl;
+  }
+
+  /* تأثير زجاجي للهيدر */
+  .glass {
+    @apply bg-white/85 backdrop-blur-lg backdrop-saturate-150;
+  }
+
+  /* خط فاصل مزخرف */
+  .accent-bar {
+    @apply h-1.5 w-16 rounded-full bg-brand-yellow;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  /* تدرّج الهوية للأبطال والأقسام */
+  .bg-brand-gradient {
+    background-image: linear-gradient(135deg, #e11221 0%, #b00d19 55%, #7a0912 100%);
+  }
+  .bg-hero-glow {
+    background:
+      radial-gradient(60% 60% at 80% 20%, rgba(255, 193, 30, 0.22) 0%, transparent 60%),
+      radial-gradient(50% 50% at 10% 90%, rgba(255, 51, 68, 0.18) 0%, transparent 60%),
+      linear-gradient(135deg, #15100f 0%, #1b0f0f 60%, #2a0d10 100%);
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .clip-text {
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+/* هيكل التحميل — Skeleton shimmer */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #ededed;
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: shimmer 1.6s infinite;
+}
+html[dir='rtl'] .skeleton::after {
+  background: linear-gradient(270deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+}
+
+/* أنماط الطباعة للفاتورة */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .container-page {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .print-area {
+    box-shadow: none !important;
+    margin: 0 auto !important;
+  }
+  /* ألوان دقيقة عند الطباعة */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

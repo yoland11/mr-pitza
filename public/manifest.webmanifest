@@ -1,0 +1,27 @@
+{
+  "name": "مستر بيتزا | Mr Pizza",
+  "short_name": "مستر بيتزا",
+  "description": "ألذ بيتزا وأكلات سريعة — اطلب الآن مع توصيل سريع داخل المدينة والقضاء.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fffbf2",
+  "theme_color": "#e11221",
+  "orientation": "portrait",
+  "categories": ["food", "shopping"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "المنيو", "url": "/menu" },
+    { "name": "العروض", "url": "/offers" },
+    { "name": "تتبع الطلب", "url": "/track" }
+  ]
+}
