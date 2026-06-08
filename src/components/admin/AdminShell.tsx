@@ -1,16 +1,24 @@
 'use client';
 
 import {
+  BarChart3,
+  Bike,
+  Building2,
+  Coins,
+  Database,
   GalleryHorizontalEnd,
   LayoutDashboard,
   LogOut,
   Menu,
+  Package,
   Pizza,
   Settings,
   ShoppingBag,
   Star,
   Tag,
   Ticket,
+  Truck,
+  UserCog,
   Volume2,
   VolumeX,
   X,
@@ -31,7 +39,20 @@ const NAV = [
   { href: '/admin/coupons', label: 'الكوبونات', Icon: Ticket },
   { href: '/admin/banners', label: 'البانرات', Icon: GalleryHorizontalEnd },
   { href: '/admin/reviews', label: 'التقييمات', Icon: Star },
+  { href: '/admin/drivers', label: 'السائقون', Icon: Bike },
+  { href: '/admin/accounting', label: 'المحاسبة', Icon: Coins },
+  { href: '/admin/inventory', label: 'المخزون', Icon: Package },
+  { href: '/admin/suppliers', label: 'الموردون', Icon: Truck },
+  { href: '/admin/analytics', label: 'التحليلات', Icon: BarChart3 },
+  { href: '/admin/branches', label: 'الفروع', Icon: Building2 },
+  { href: '/admin/backup', label: 'النسخ الاحتياطي', Icon: Database },
+  { href: '/admin/staff', label: 'الموظفون', Icon: UserCog },
   { href: '/admin/settings', label: 'الإعدادات', Icon: Settings },
+];
+
+const SCREENS = [
+  { href: '/kitchen', label: 'شاشة المطبخ' },
+  { href: '/display', label: 'شاشة الاستقبال' },
 ];
 
 export function AdminShell({ children, email }: { children: React.ReactNode; email: string }) {
@@ -93,6 +114,21 @@ export function AdminShell({ children, email }: { children: React.ReactNode; ema
         })}
       </nav>
 
+      <div className="border-t border-white/10 px-3 py-2">
+        <p className="px-2 pb-1 text-[11px] font-bold text-white/40">شاشات التشغيل</p>
+        {SCREENS.map((s) => (
+          <Link
+            key={s.href}
+            href={s.href}
+            target="_blank"
+            className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold text-white/70 transition hover:bg-white/10 hover:text-white"
+          >
+            <span className="text-brand-yellow">↗</span>
+            {s.label}
+          </Link>
+        ))}
+      </div>
+
       <div className="border-t border-white/10 p-3">
         <p className="truncate px-2 pb-2 text-xs text-white/50" dir="ltr">{email}</p>
         <button onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-white/70 transition hover:bg-brand-red hover:text-white">
@@ -106,7 +142,7 @@ export function AdminShell({ children, email }: { children: React.ReactNode; ema
   return (
     <div className="min-h-screen bg-cream lg:flex">
       {/* الشريط الجانبي — سطح المكتب */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 bg-ink lg:block">{SidebarContent}</aside>
+      <aside className="no-print sticky top-0 hidden h-screen w-64 shrink-0 bg-ink lg:block">{SidebarContent}</aside>
 
       {/* الشريط الجانبي — الموبايل */}
       {open && (
@@ -118,7 +154,7 @@ export function AdminShell({ children, email }: { children: React.ReactNode; ema
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* الشريط العلوي */}
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-white px-4">
+        <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-white px-4">
           <div className="flex items-center gap-3">
             <button onClick={() => setOpen(true)} className="grid h-10 w-10 place-items-center rounded-xl bg-ink/5 lg:hidden" aria-label="القائمة">
               <Menu className="h-5 w-5" />

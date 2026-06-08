@@ -5,6 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { QuantityStepper } from '@/components/ui/QuantityStepper';
+import { createClient } from '@/lib/supabase/client';
+import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { useCart } from '@/lib/store/cart';
 import { toast } from '@/lib/store/toast';
 import type { RestaurantSettings } from '@/lib/types';
@@ -26,10 +28,15 @@ export function CartView({ settings }: { settings: RestaurantSettings }) {
     if (!code.trim()) return;
     setApplying(true);
     try {
+      let uid: string | null = null;
+      if (isSupabaseConfigured) {
+        const { data: { user } } = await createClient().auth.getUser();
+        uid = user?.id ?? null;
+      }
       const res = await fetch('/api/coupon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code.trim(), subtotal: sub }),
+        body: JSON.stringify({ code: code.trim(), subtotal: sub, userId: uid }),
       });
       const data = await res.json();
       if (!res.ok || !data.valid) {

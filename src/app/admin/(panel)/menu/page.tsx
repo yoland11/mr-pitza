@@ -25,6 +25,7 @@ interface Draft {
   is_available: boolean;
   is_featured: boolean;
   sort_order: number;
+  offer_ends_at: string | null;
   sizes: SizeDraft[];
   addons: AddonDraft[];
   images: DraftImage[];
@@ -41,6 +42,7 @@ const emptyDraft = (categoryId: string): Draft => ({
   is_available: true,
   is_featured: false,
   sort_order: 0,
+  offer_ends_at: null,
   sizes: [],
   addons: [],
   images: [],
@@ -89,6 +91,7 @@ export default function AdminMenu() {
       is_available: p.is_available,
       is_featured: p.is_featured,
       sort_order: p.sort_order,
+      offer_ends_at: p.offer_ends_at,
       sizes: (p.sizes ?? []).map((s) => ({ name: s.name, price_delta: s.price_delta, is_default: s.is_default })),
       addons: (p.addons ?? []).map((a) => ({ name: a.name, price: a.price })),
       images: [...(p.images ?? [])]
@@ -133,6 +136,7 @@ export default function AdminMenu() {
       is_available: draft.is_available,
       is_featured: draft.is_featured,
       sort_order: Number(draft.sort_order) || 0,
+      offer_ends_at: draft.offer_ends_at || null,
     };
 
     let productId = draft.id;
@@ -256,6 +260,15 @@ export default function AdminMenu() {
                 <label className="field-label">سعر بعد الخصم (اختياري)</label>
                 <input type="number" value={draft.discount_price ?? ''} onChange={(e) => setDraft({ ...draft, discount_price: e.target.value ? Number(e.target.value) : null })} className="field" />
               </div>
+            </div>
+            <div>
+              <label className="field-label">نهاية العرض (عدّاد تنازلي — اختياري)</label>
+              <input
+                type="datetime-local"
+                value={draft.offer_ends_at ? draft.offer_ends_at.slice(0, 16) : ''}
+                onChange={(e) => setDraft({ ...draft, offer_ends_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                className="field"
+              />
             </div>
 
             {/* الأحجام */}

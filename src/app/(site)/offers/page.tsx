@@ -3,6 +3,7 @@ import { Sparkles } from 'lucide-react';
 import { CouponCard } from '@/components/offers/CouponCard';
 import { ProductCard } from '@/components/menu/ProductCard';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { CountdownTimer } from '@/components/ui/CountdownTimer';
 import { getCategories, getCoupons, getProducts } from '@/lib/data/queries';
 
 export const metadata: Metadata = {
@@ -23,6 +24,12 @@ export default async function OffersPage() {
   const familyCat = categories.find((c) => c.slug === 'family');
   const familyMeals = familyCat ? products.filter((p) => p.category_id === familyCat.id) : [];
 
+  // أقرب عرض ينتهي (للعد التنازلي)
+  const soonestEnd = dailyOffers
+    .map((p) => p.offer_ends_at)
+    .filter((d): d is string => !!d && new Date(d) > new Date())
+    .sort()[0];
+
   return (
     <div className="container-page py-10">
       {/* بطل العروض */}
@@ -30,6 +37,11 @@ export default async function OffersPage() {
         <Sparkles className="mx-auto mb-3 h-10 w-10 text-brand-yellow" />
         <h1 className="text-3xl font-black sm:text-5xl">عروض مستر بيتزا</h1>
         <p className="mx-auto mt-3 max-w-md text-white/85">خصومات يومية، كوبونات حصرية، ووجبات عائلية بأسعار لا تُقاوم.</p>
+        {soonestEnd && (
+          <div className="relative z-10 mt-5 flex justify-center">
+            <CountdownTimer endsAt={soonestEnd} label="أسرع! ينتهي العرض خلال" className="bg-white/95" />
+          </div>
+        )}
         <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-12 -right-6 h-48 w-48 rounded-full bg-black/10" />
       </div>

@@ -82,6 +82,8 @@ function make(
     is_available: true,
     is_featured: opts.is_featured ?? false,
     sort_order: 1,
+    offer_starts_at: null,
+    offer_ends_at: opts.discount_price != null ? new Date(Date.now() + 3 * 86400000).toISOString() : null,
     created_at: new Date().toISOString(),
     sizes: opts.withSizes ? sizes(id) : [],
     addons: opts.withAddons ? pizzaAddons(id) : [],
@@ -126,8 +128,9 @@ seedProducts.forEach((p) => {
 });
 
 export const seedCoupons: Coupon[] = [
-  { id: 'coupon-welcome', code: 'WELCOME', description: 'خصم ترحيبي ١٠٪', discount_percent: 10, max_discount: 5000, min_order: 10000, expires_at: null, is_active: true, created_at: new Date().toISOString() },
-  { id: 'coupon-pizza20', code: 'PIZZA20', description: 'خصم ٢٠٪ على الطلبات فوق ٢٠ ألف', discount_percent: 20, max_discount: 8000, min_order: 20000, expires_at: null, is_active: true, created_at: new Date().toISOString() },
+  { id: 'coupon-welcome', code: 'WELCOME', description: 'خصم ترحيبي ١٠٪', type: 'percent', discount_percent: 10, amount: 0, max_discount: 5000, min_order: 10000, usage_limit: null, per_user_limit: null, used_count: 0, starts_at: null, expires_at: null, first_order_only: false, customers_only: false, is_active: true, created_at: new Date().toISOString() },
+  { id: 'coupon-pizza20', code: 'PIZZA20', description: 'خصم ٢٠٪ على الطلبات فوق ٢٠ ألف', type: 'percent', discount_percent: 20, amount: 0, max_discount: 8000, min_order: 20000, usage_limit: null, per_user_limit: null, used_count: 0, starts_at: null, expires_at: null, first_order_only: false, customers_only: false, is_active: true, created_at: new Date().toISOString() },
+  { id: 'coupon-first', code: 'FIRST15', description: 'خصم ١٥٪ لأول طلب', type: 'percent', discount_percent: 15, amount: 0, max_discount: 6000, min_order: 8000, usage_limit: null, per_user_limit: 1, used_count: 0, starts_at: null, expires_at: null, first_order_only: true, customers_only: true, is_active: true, created_at: new Date().toISOString() },
 ];
 
 export const seedBanners: Banner[] = [

@@ -10,7 +10,11 @@ import type { Coupon } from '@/lib/types';
 import { cn, formatDate, formatPrice } from '@/lib/utils';
 
 type Draft = Partial<Coupon>;
-const empty: Draft = { code: '', description: '', discount_percent: 10, max_discount: null, min_order: 0, expires_at: null, is_active: true };
+const empty: Draft = {
+  code: '', description: '', type: 'percent', discount_percent: 10, amount: 0,
+  max_discount: null, min_order: 0, usage_limit: null, per_user_limit: null,
+  starts_at: null, expires_at: null, first_order_only: false, customers_only: false, is_active: true,
+};
 
 export default function AdminCoupons() {
   const [items, setItems] = useState<Coupon[]>([]);
@@ -32,17 +36,27 @@ export default function AdminCoupons() {
 
   const save = async () => {
     if (!draft.code?.trim()) return toast.error('كود الكوبون مطلوب');
-    const percent = Number(draft.discount_percent);
-    if (!percent || percent < 1 || percent > 100) return toast.error('نسبة الخصم يجب أن تكون بين 1 و 100');
+    const type = draft.type ?? 'percent';
+    const percent = Number(draft.discount_percent) || 0;
+    const amount = Number(draft.amount) || 0;
+    if (type === 'percent' && (percent < 1 || percent > 100)) return toast.error('نسبة الخصم يجب أن تكون بين 1 و 100');
+    if (type === 'fixed' && amount <= 0) return toast.error('أدخل مبلغ خصم صحيحاً');
     setSaving(true);
     const supabase = createClient();
     const payload = {
       code: draft.code.toUpperCase().trim(),
       description: draft.description || null,
-      discount_percent: percent,
+      type,
+      discount_percent: type === 'percent' ? percent : 0,
+      amount: type === 'fixed' ? amount : 0,
       max_discount: draft.max_discount ? Number(draft.max_discount) : null,
       min_order: Number(draft.min_order) || 0,
+      usage_limit: draft.usage_limit ? Number(draft.usage_limit) : null,
+      per_user_limit: draft.per_user_limit ? Number(draft.per_user_limit) : null,
+      starts_at: draft.starts_at || null,
       expires_at: draft.expires_at || null,
+      first_order_only: draft.first_order_only ?? false,
+      customers_only: draft.customers_only ?? false,
       is_active: draft.is_active ?? true,
     };
     const { error } = draft.id
@@ -87,7 +101,9 @@ export default function AdminCoupons() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-lg font-black text-ink">{c.code}</span>
-                  <span className="badge-yellow">{c.discount_percent}%</span>
+                  <span className="badge-yellow">{c.type === 'fixed' ? formatPrice(c.amount) : `${c.discount_percent}%`}</span>
+                  {c.first_order_only && <span className="badge-soft">أول طلب</span>}
+                  {c.customers_only && <span className="badge-soft">للأعضاء</span>}
                 </div>
                 <p className="truncate text-xs text-ink-muted">حد أدنى {formatPrice(c.min_order)}{c.expires_at ? ` · ينتهي ${formatDate(c.expires_at)}` : ''}</p>
               </div>
@@ -111,28 +127,68 @@ export default function AdminCoupons() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="field-label">نسبة الخصم %</label>
-              <input type="number" value={draft.discount_percent ?? 10} onChange={(e) => setDraft({ ...draft, discount_percent: Number(e.target.value) })} className="field" />
+              <label className="field-label">نوع الخصم</label>
+              <select value={draft.type ?? 'percent'} onChange={(e) => setDraft({ ...draft, type: e.target.value as 'percent' | 'fixed' })} className="field">
+                <option value="percent">نسبة مئوية %</option>
+                <option value="fixed">مبلغ ثابت (د.ع)</option>
+              </select>
             </div>
+            {draft.type === 'fixed' ? (
+              <div>
+                <label className="field-label">مبلغ الخصم</label>
+                <input type="number" value={draft.amount ?? 0} onChange={(e) => setDraft({ ...draft, amount: Number(e.target.value) })} className="field" />
+              </div>
+            ) : (
+              <div>
+                <label className="field-label">نسبة الخصم %</label>
+                <input type="number" value={draft.discount_percent ?? 10} onChange={(e) => setDraft({ ...draft, discount_percent: Number(e.target.value) })} className="field" />
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">حد أقصى للخصم (اختياري)</label>
               <input type="number" value={draft.max_discount ?? ''} onChange={(e) => setDraft({ ...draft, max_discount: e.target.value ? Number(e.target.value) : null })} className="field" />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">الحد الأدنى للطلب</label>
               <input type="number" value={draft.min_order ?? 0} onChange={(e) => setDraft({ ...draft, min_order: Number(e.target.value) })} className="field" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label">تاريخ البداية</label>
+              <input type="date" value={draft.starts_at ? draft.starts_at.slice(0, 10) : ''} onChange={(e) => setDraft({ ...draft, starts_at: e.target.value ? new Date(e.target.value).toISOString() : null })} className="field" />
             </div>
             <div>
               <label className="field-label">تاريخ الانتهاء</label>
               <input type="date" value={draft.expires_at ? draft.expires_at.slice(0, 10) : ''} onChange={(e) => setDraft({ ...draft, expires_at: e.target.value ? new Date(e.target.value).toISOString() : null })} className="field" />
             </div>
           </div>
-          <label className="flex cursor-pointer items-center gap-2">
-            <input type="checkbox" checked={draft.is_active ?? true} onChange={(e) => setDraft({ ...draft, is_active: e.target.checked })} className="h-5 w-5 accent-brand-red" />
-            <span className="font-bold text-ink">مفعّل</span>
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label">حد الاستخدام الكلي</label>
+              <input type="number" value={draft.usage_limit ?? ''} onChange={(e) => setDraft({ ...draft, usage_limit: e.target.value ? Number(e.target.value) : null })} className="field" placeholder="بلا حد" />
+            </div>
+            <div>
+              <label className="field-label">حد لكل مستخدم</label>
+              <input type="number" value={draft.per_user_limit ?? ''} onChange={(e) => setDraft({ ...draft, per_user_limit: e.target.value ? Number(e.target.value) : null })} className="field" placeholder="بلا حد" />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input type="checkbox" checked={draft.first_order_only ?? false} onChange={(e) => setDraft({ ...draft, first_order_only: e.target.checked })} className="h-5 w-5 accent-brand-red" />
+              <span className="font-bold text-ink">أول طلب فقط</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input type="checkbox" checked={draft.customers_only ?? false} onChange={(e) => setDraft({ ...draft, customers_only: e.target.checked })} className="h-5 w-5 accent-brand-red" />
+              <span className="font-bold text-ink">للأعضاء فقط</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2">
+              <input type="checkbox" checked={draft.is_active ?? true} onChange={(e) => setDraft({ ...draft, is_active: e.target.checked })} className="h-5 w-5 accent-brand-red" />
+              <span className="font-bold text-ink">مفعّل</span>
+            </label>
+          </div>
           <button onClick={save} disabled={saving} className="btn-primary w-full">{saving ? <Loader2 className="h-5 w-5 animate-spin" /> : 'حفظ'}</button>
         </div>
       </Modal>

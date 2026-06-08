@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { addMemoryOrder } from '@/lib/data/memoryStore';
 import { seedCoupons, seedSettings } from '@/lib/data/seed';
 import { createOrderSchema } from '@/lib/validation';
+import { evaluateCoupon } from '@/lib/coupons';
+import { notifyOrderStatus } from '@/lib/whatsapp';
 import { generateOrderCode } from '@/lib/utils';
 import type { Coupon, Order, OrderItem, PaymentStatus, RestaurantSettings } from '@/lib/types';
 
@@ -53,9 +55,10 @@ export async function POST(req: Request) {
     );
   }
 
-  // التحقق من الكوبون وإعادة حساب الخصم
+  // التحقق من الكوبون وإعادة حساب الخصم (منطق موحّد متقدم)
   let discount = 0;
   let appliedCode: string | null = null;
+  let appliedCoupon: Coupon | null = null;
   if (input.couponCode) {
     let coupon: Coupon | null = null;
     if (supabase) {
@@ -70,15 +73,13 @@ export async function POST(req: Request) {
     } else {
       coupon = seedCoupons.find((c) => c.code.toUpperCase() === input.couponCode!.toUpperCase()) ?? null;
     }
-    if (
-      coupon &&
-      coupon.is_active &&
-      subtotal >= coupon.min_order &&
-      (!coupon.expires_at || new Date(coupon.expires_at) >= new Date())
-    ) {
-      discount = Math.round((subtotal * coupon.discount_percent) / 100);
-      if (coupon.max_discount != null) discount = Math.min(discount, coupon.max_discount);
-      appliedCode = coupon.code;
+    if (coupon) {
+      const eval0 = await evaluateCoupon(coupon, subtotal, { userId: input.userId, admin: supabase });
+      if (eval0.valid) {
+        discount = eval0.discount;
+        appliedCode = coupon.code;
+        appliedCoupon = coupon;
+      }
     }
   }
 
@@ -114,6 +115,7 @@ export async function POST(req: Request) {
         delivery_fee: deliveryFee,
         total,
         coupon_code: appliedCode,
+        user_id: input.userId ?? null,
       })
       .select('id, code')
       .single();
@@ -137,6 +139,27 @@ export async function POST(req: Request) {
     if (itemsError) {
       await supabase.from('orders').delete().eq('id', order.id);
       return NextResponse.json({ ok: false, error: 'تعذّر حفظ عناصر الطلب' }, { status: 500 });
+    }
+
+    // تسجيل استخدام الكوبون وزيادة العدّاد
+    if (appliedCoupon) {
+      await supabase.from('coupon_redemptions').insert({
+        coupon_id: appliedCoupon.id,
+        user_id: input.userId ?? null,
+        order_id: order.id,
+        code: appliedCoupon.code,
+      });
+      await supabase
+        .from('coupons')
+        .update({ used_count: (appliedCoupon.used_count ?? 0) + 1 })
+        .eq('id', appliedCoupon.id);
+    }
+
+    // إشعار العميل بإنشاء الطلب (واتساب/Push) — آمن ولا يكسر شيئاً
+    try {
+      await notifyOrderStatus(order.id);
+    } catch {
+      /* تجاهل */
     }
 
     return NextResponse.json({ ok: true, id: order.id, code: order.code });
@@ -170,6 +193,9 @@ export async function POST(req: Request) {
     payment_status: paymentStatus,
     status: 'received',
     notes: input.notes || null,
+    user_id: input.userId ?? null,
+    driver_id: null,
+    branch_id: null,
     subtotal,
     discount,
     delivery_fee: deliveryFee,

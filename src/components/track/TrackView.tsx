@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { LiveMap } from './LiveMap';
 import { toast } from '@/lib/store/toast';
 import {
   ORDER_STATUS_FLOW,
@@ -36,6 +37,10 @@ interface TrackedOrder {
   created_at: string;
   city: string;
   reviewed?: boolean;
+  cust_lat?: number | null;
+  cust_lng?: number | null;
+  driver?: { lat: number; lng: number; updated_at: string | null } | null;
+  eta_minutes?: number | null;
   items?: { product_name: string; size_name: string | null; quantity: number; line_total: number }[];
 }
 
@@ -120,10 +125,11 @@ export function TrackView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // متابعة الحالة كل 15 ثانية بعد تفعيل الإشعارات
+  // متابعة الحالة كل 15 ثانية: بعد تفعيل الإشعارات، أو دائماً أثناء «في الطريق» (للتتبّع المباشر)
   useEffect(() => {
-    if (!order || !notifOn) return;
+    if (!order) return;
     if (TERMINAL.includes(order.status)) return;
+    if (!notifOn && order.status !== 'on_the_way') return;
     const id = setInterval(() => search({ code: order.code }, true), 15000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -266,6 +272,18 @@ export function TrackView() {
                 })}
               </ol>
             </div>
+          )}
+
+          {/* التتبّع المباشر على الخريطة */}
+          {order.status === 'on_the_way' && order.driver && (
+            <LiveMap
+              driverLat={order.driver.lat}
+              driverLng={order.driver.lng}
+              custLat={order.cust_lat ?? null}
+              custLng={order.cust_lng ?? null}
+              eta={order.eta_minutes ?? null}
+              updatedAt={order.driver.updated_at}
+            />
           )}
 
           {/* عناصر الطلب */}

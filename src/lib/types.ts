@@ -65,6 +65,8 @@ export interface Product {
   is_available: boolean;
   is_featured: boolean;
   sort_order: number;
+  offer_starts_at: string | null;
+  offer_ends_at: string | null;
   created_at: string;
   // علاقات اختيارية
   category?: Category;
@@ -73,14 +75,24 @@ export interface Product {
   images?: ProductImage[];
 }
 
+export type CouponType = 'percent' | 'fixed';
+
 export interface Coupon {
   id: UUID;
   code: string;
   description: string | null;
-  discount_percent: number; // نسبة الخصم %
+  type: CouponType; // نسبة مئوية أو مبلغ ثابت
+  discount_percent: number; // نسبة الخصم % (عند type=percent)
+  amount: number; // مبلغ ثابت (عند type=fixed)
   max_discount: number | null;
   min_order: number;
+  usage_limit: number | null; // حد الاستخدام الكلي
+  per_user_limit: number | null; // حد لكل مستخدم
+  used_count: number;
+  starts_at: string | null;
   expires_at: string | null;
+  first_order_only: boolean; // أول طلب فقط
+  customers_only: boolean; // للعملاء المسجّلين فقط
   is_active: boolean;
   created_at: string;
 }
@@ -146,6 +158,9 @@ export interface Order {
   payment_status: PaymentStatus;
   status: OrderStatus;
   notes: string | null;
+  user_id: string | null;
+  driver_id: string | null;
+  branch_id: string | null;
   subtotal: number;
   discount: number;
   delivery_fee: number;
@@ -166,6 +181,213 @@ export interface Review {
   is_approved: boolean;
   created_at: string;
 }
+
+export type UserRole = 'owner' | 'manager' | 'admin' | 'cashier' | 'kitchen' | 'driver' | 'employee' | 'staff';
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  owner: 'المالك',
+  manager: 'مدير',
+  admin: 'مشرف',
+  cashier: 'كاشير',
+  kitchen: 'المطبخ',
+  driver: 'سائق توصيل',
+  employee: 'موظف',
+  staff: 'طاقم',
+};
+
+/** الأدوار التي تملك صلاحية لوحة الإدارة الخلفية */
+export const ADMIN_ROLES: UserRole[] = ['owner', 'manager', 'admin', 'cashier', 'staff'];
+
+export interface StaffUser {
+  id: UUID;
+  email: string;
+  full_name: string | null;
+  role: UserRole;
+  created_at: string;
+}
+
+export type DriverStatus = 'available' | 'busy' | 'offline';
+
+export interface Driver {
+  id: UUID;
+  user_id: UUID | null;
+  name: string;
+  phone: string;
+  vehicle: string | null;
+  code: string;
+  status: DriverStatus;
+  is_active: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  location_updated_at: string | null;
+  branch_id: UUID | null;
+  created_at: string;
+}
+
+export interface Branch {
+  id: UUID;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  is_active: boolean;
+  is_main: boolean;
+  created_at: string;
+}
+
+export const DRIVER_STATUS_LABELS: Record<DriverStatus, string> = {
+  available: 'متاح',
+  busy: 'مشغول',
+  offline: 'غير متصل',
+};
+
+/* ===== الإدارة الخلفية (المرحلة 3) ===== */
+export interface Expense {
+  id: UUID;
+  category: string;
+  description: string | null;
+  amount: number;
+  vendor: string | null;
+  spent_at: string;
+  created_at: string;
+}
+
+export interface Revenue {
+  id: UUID;
+  source: string;
+  description: string | null;
+  amount: number;
+  order_id: UUID | null;
+  received_at: string;
+  created_at: string;
+}
+
+export type CashDirection = 'in' | 'out';
+export interface CashboxTransaction {
+  id: UUID;
+  direction: CashDirection;
+  amount: number;
+  reason: string | null;
+  created_at: string;
+}
+
+export type DebtKind = 'receivable' | 'payable';
+export interface Debt {
+  id: UUID;
+  party: string;
+  kind: DebtKind;
+  amount: number;
+  description: string | null;
+  due_date: string | null;
+  is_settled: boolean;
+  created_at: string;
+}
+
+export interface Supplier {
+  id: UUID;
+  name: string;
+  phone: string | null;
+  contact_name: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface InventoryItem {
+  id: UUID;
+  name: string;
+  unit: string;
+  quantity: number;
+  min_quantity: number;
+  cost: number;
+  supplier_id: UUID | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export type StockDirection = 'in' | 'out' | 'adjust';
+export interface StockMovement {
+  id: UUID;
+  item_id: UUID;
+  direction: StockDirection;
+  quantity: number;
+  reason: string | null;
+  created_at: string;
+}
+
+export type PurchaseStatus = 'draft' | 'ordered' | 'received' | 'cancelled';
+export interface PurchaseOrderItemRow {
+  id: UUID;
+  po_id: UUID;
+  item_id: UUID | null;
+  name: string;
+  quantity: number;
+  unit_cost: number;
+  line_total: number;
+}
+export interface PurchaseOrder {
+  id: UUID;
+  supplier_id: UUID | null;
+  status: PurchaseStatus;
+  total: number;
+  notes: string | null;
+  created_at: string;
+  received_at: string | null;
+  items?: PurchaseOrderItemRow[];
+}
+
+export const PURCHASE_STATUS_LABELS: Record<PurchaseStatus, string> = {
+  draft: 'مسودّة',
+  ordered: 'تم الطلب',
+  received: 'تم الاستلام',
+  cancelled: 'ملغي',
+};
+
+export interface Profile {
+  id: UUID;
+  full_name: string | null;
+  phone: string | null;
+  email: string | null;
+  birthday: string | null;
+  points: number;
+  created_at: string;
+}
+
+export interface CustomerAddress {
+  id: UUID;
+  user_id: UUID;
+  label: string | null;
+  city: string;
+  address: string;
+  landmark: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface Favorite {
+  id: UUID;
+  user_id: UUID;
+  product_id: UUID;
+  created_at: string;
+}
+
+export interface PointTransaction {
+  id: UUID;
+  user_id: UUID;
+  order_id: UUID | null;
+  delta: number;
+  reason: string | null;
+  created_at: string;
+}
+
+/* إعدادات برنامج الولاء */
+export const LOYALTY = {
+  DINARS_PER_POINT: 10000, // كل 10,000 دينار = نقطة
+  POINTS_PER_REWARD: 10, // كل 10 نقاط
+  REWARD_VALUE: 5000, // = خصم 5,000 دينار
+};
 
 /* ===== أنواع جانب العميل (السلة) ===== */
 export interface CartAddon {

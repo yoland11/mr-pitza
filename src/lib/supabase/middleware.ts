@@ -33,10 +33,18 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isAdminArea = path.startsWith('/admin') && !path.startsWith('/admin/login');
+  const isAccountArea = path.startsWith('/account');
 
   if (isAdminArea && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/admin/login';
+    url.searchParams.set('redirect', path);
+    return NextResponse.redirect(url);
+  }
+
+  if (isAccountArea && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
     url.searchParams.set('redirect', path);
     return NextResponse.redirect(url);
   }

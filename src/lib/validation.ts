@@ -31,6 +31,7 @@ export const createOrderSchema = z
     paymentMethod: z.enum(['cash', 'card']),
     notes: z.string().trim().max(400).optional().default(''),
     couponCode: z.string().trim().max(40).optional().nullable(),
+    userId: z.string().uuid().optional().nullable(),
     items: z.array(orderItemSchema).min(1, 'السلة فارغة'),
   })
   .superRefine((data, ctx) => {
@@ -85,6 +86,7 @@ export const trackSchema = z
 export const couponSchema = z.object({
   code: z.string().trim().min(2).max(40),
   subtotal: z.number().nonnegative(),
+  userId: z.string().uuid().optional().nullable(),
 });
 
 /** مخطط تقييم الطلب بعد التسليم */

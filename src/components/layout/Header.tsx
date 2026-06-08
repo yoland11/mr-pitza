@@ -1,6 +1,6 @@
 'use client';
 
-import { Menu, X } from 'lucide-react';
+import { Menu, User, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -61,6 +61,13 @@ export function Header() {
         <div className="flex items-center gap-2">
           <Link href="/menu" className="btn-primary btn-sm hidden sm:inline-flex">
             اطلب الآن
+          </Link>
+          <Link
+            href="/account"
+            aria-label="حسابي"
+            className="grid h-11 w-11 place-items-center rounded-full bg-ink/5 text-ink transition hover:bg-brand-red hover:text-white"
+          >
+            <User className="h-5 w-5" />
           </Link>
           <CartButton />
           <button

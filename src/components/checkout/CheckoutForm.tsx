@@ -15,8 +15,10 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { QrCode } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { createClient } from '@/lib/supabase/client';
+import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { useCart } from '@/lib/store/cart';
 import { toast } from '@/lib/store/toast';
 import type { DeliveryMethod, PaymentMethod, RestaurantSettings } from '@/lib/types';
@@ -31,6 +33,16 @@ export function CheckoutForm({ settings }: { settings: RestaurantSettings }) {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ code: string; id: string } | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // جلب هوية العميل المسجّل (لربط الطلب وكسب النقاط)
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    (async () => {
+      const { data: { user } } = await createClient().auth.getUser();
+      setUserId(user?.id ?? null);
+    })();
+  }, []);
 
   const {
     register,
@@ -99,6 +111,7 @@ export function CheckoutForm({ settings }: { settings: RestaurantSettings }) {
         latitude: coords?.lat ?? null,
         longitude: coords?.lng ?? null,
         couponCode: couponCode ?? null,
+        userId: userId ?? null,
         items: items.map((it) => ({
           productId: it.productId,
           name: it.name,

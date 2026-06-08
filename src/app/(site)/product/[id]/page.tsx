@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ProductConfigurator } from '@/components/product/ProductConfigurator';
 import { ProductGallery } from '@/components/product/ProductGallery';
-import { getProductById } from '@/lib/data/queries';
+import { CrossSell } from '@/components/menu/CrossSell';
+import { CountdownTimer } from '@/components/ui/CountdownTimer';
+import { getCrossSell, getProductById } from '@/lib/data/queries';
 import { discountPercent, effectivePrice, formatPrice } from '@/lib/utils';
 
 export const revalidate = 60;
@@ -31,6 +33,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
   const price = effectivePrice(product);
   const off = discountPercent(product);
+  const cross = await getCrossSell([product.id]);
+  const offerEnds = product.offer_ends_at && new Date(product.offer_ends_at) > new Date() ? product.offer_ends_at : null;
 
   return (
     <div className="container-page py-6 lg:py-10">
@@ -71,11 +75,19 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
             <p className="mt-4 text-base leading-relaxed text-ink/80">{product.description}</p>
           )}
 
+          {offerEnds && (
+            <div className="mt-4">
+              <CountdownTimer endsAt={offerEnds} label="ينتهي العرض خلال" />
+            </div>
+          )}
+
           <div className="mt-6 border-t border-line pt-6">
             <ProductConfigurator product={product} />
           </div>
         </div>
       </div>
+
+      <CrossSell products={cross} title="أضف إلى طلبك 🍟🥤" />
     </div>
   );
 }

@@ -72,6 +72,39 @@ npm run dev                  # http://localhost:3000
    (`closed_message`, `map_url`, `qr_payment_image_url`, `sound_alerts`) و`orders.reviewed_at`.
    يستخدم `add column if not exists` و`create table if not exists` و`drop policy if exists` — آمن للتكرار.
 
+   **🆕 المرحلة 1 (العملاء والولاء):** نفّذ بعدها [`supabase/migrations/0002_customers_loyalty.sql`](supabase/migrations/0002_customers_loyalty.sql).
+   يضيف: `profiles` (مع محفّز إنشاء تلقائي عند التسجيل)، `customer_addresses`، `favorites`،
+   `point_transactions` (مع محفّز كسب النقاط تلقائياً)، `orders.user_id`، أعمدة عداد العروض على المنتجات،
+   كوبونات متقدمة (`type/amount/usage_limit/per_user_limit/starts_at/first_order_only/customers_only`) و`coupon_redemptions`.
+
+   **تسجيل الدخول عبر Google:** فعّل مزوّد Google من Supabase → Authentication → Providers، وأضف
+   `${SITE_URL}/auth/callback` ضمن Redirect URLs. لا حاجة لأي مفتاح داخل الكود.
+
+   **🆕 المرحلة 2 (العمليات):** نفّذ بعدها [`supabase/migrations/0003_operations.sql`](supabase/migrations/0003_operations.sql).
+   يضيف: نظام الأدوار (owner/manager/admin/cashier/kitchen/driver/employee) + دوال `is_admin()`/`has_role()`،
+   جدول `drivers` و`driver_assignments` و`orders.driver_id`، وسياسات RLS للمطبخ والاستقبال.
+   **بعد التنفيذ عيّن نفسك كمالك:** `update public.users set role='owner' where email='بريدك';`
+   - شاشة المطبخ: `/kitchen` · شاشة الاستقبال: `/display` (تتطلبان دخول طاقم بدور مناسب).
+   - تطبيق السائق: `/driver` — يدخل السائق بهاتفه + رمز الدخول الذي تنشئه من `/admin/drivers`.
+   - الموظفون والأدوار: `/admin/staff` (للمالك/المدير).
+   - (اختياري) `DRIVER_SESSION_SECRET` لتوقيع جلسات السائق؛ افتراضياً يستخدم مفتاح الخدمة.
+
+   **🆕 المرحلة 3 (الإدارة الخلفية):** نفّذ بعدها [`supabase/migrations/0004_backoffice.sql`](supabase/migrations/0004_backoffice.sql).
+   يضيف جداول: `expenses`, `revenues`, `cashbox_transactions`, `debts`, `suppliers`, `inventory_items`,
+   `stock_movements`, `product_ingredients`, `purchase_orders`, `purchase_order_items` + محفّز خصم المخزون
+   تلقائياً عند البيع (حسب وصفة المنتج) + سياسات RLS (قراءة للطاقم الإداري، كتابة للمالك/المدير/المشرف).
+   الصفحات: `/admin/accounting` · `/admin/inventory` · `/admin/suppliers` · `/admin/analytics` · `/admin/backup`.
+
+   **🆕 المرحلة 5 (التكاملات):** نفّذ بعدها [`supabase/migrations/0005_integrations.sql`](supabase/migrations/0005_integrations.sql).
+   يضيف: `notifications` (سجل)، أعمدة موقع السائق (`latitude/longitude/location_updated_at`)، جدول `branches`
+   + عمود `branch_id` (NULL = الفرع الرئيسي) على orders/drivers/inventory/expenses/revenues.
+   - **واتساب:** املأ `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID` (Meta Cloud API) → إشعارات تلقائية عند إنشاء الطلب وتغيّر الحالة.
+     المساعد الذكي: اضبط Webhook في Meta على `${SITE_URL}/api/whatsapp/webhook` بنفس `WHATSAPP_VERIFY_TOKEN`.
+   - **Web Push:** ولّد المفاتيح `npx web-push generate-vapid-keys` واملأ `NEXT_PUBLIC_VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`.
+   - **التتبع المباشر:** يعمل تلقائياً — تطبيق السائق يبثّ موقعه، وتظهر الخريطة + الوقت المتوقّع في صفحة التتبّع عند «في الطريق».
+   - **تعدد الفروع:** `/admin/branches` + فلترة/تعيين الفرع في صفحة الطلبات.
+   كل التكاملات «آمنة الافتراض»: تعمل المنصّة كاملة حتى بدون هذه المفاتيح (no-op بهدوء).
+
 4. أنشئ مستخدم المدير:
    - من **Authentication → Users → Add user** (بريد + كلمة مرور).
    - ثم في SQL Editor امنحه صلاحية الإدارة:

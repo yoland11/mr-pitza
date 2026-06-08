@@ -22,6 +22,8 @@ import {
   ORDER_STATUS_LABELS,
   PAYMENT_METHOD_LABELS,
   PAYMENT_STATUS_LABELS,
+  type Branch,
+  type Driver,
   type Order,
   type OrderStatus,
   type PaymentStatus,
@@ -39,13 +41,50 @@ export default function AdminOrders() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [branchFilter, setBranchFilter] = useState('');
   const decrement = useAdminNotify((s) => s.decrement);
+
+  useEffect(() => {
+    (async () => {
+      const supabase = createClient();
+      const [{ data: drv }, { data: brs }] = await Promise.all([
+        supabase.from('drivers').select('*').eq('is_active', true).order('name'),
+        supabase.from('branches').select('*').order('created_at'),
+      ]);
+      setDrivers((drv as Driver[]) ?? []);
+      setBranches((brs as Branch[]) ?? []);
+    })();
+  }, []);
+
+  const assignBranch = async (orderId: string, branchId: string) => {
+    const supabase = createClient();
+    const value = branchId || null;
+    const { error } = await supabase.from('orders').update({ branch_id: value }).eq('id', orderId);
+    if (error) return toast.error('تعذّر تعيين الفرع');
+    setOrders((p) => p.map((o) => (o.id === orderId ? { ...o, branch_id: value } : o)));
+  };
+
+  const assignDriver = async (orderId: string, driverId: string) => {
+    const supabase = createClient();
+    const value = driverId || null;
+    const { error } = await supabase.from('orders').update({ driver_id: value }).eq('id', orderId);
+    if (error) return toast.error('تعذّر إسناد السائق');
+    if (value) {
+      await supabase.from('driver_assignments').insert({ order_id: orderId, driver_id: value, status: 'assigned' });
+      await supabase.from('drivers').update({ status: 'busy' }).eq('id', value);
+    }
+    setOrders((p) => p.map((o) => (o.id === orderId ? { ...o, driver_id: value } : o)));
+    toast.success(value ? 'تم إسناد الطلب للسائق' : 'تم إلغاء الإسناد');
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
     let q = supabase.from('orders').select('*, items:order_items(*)').order('created_at', { ascending: false }).limit(200);
     if (filter !== 'all') q = q.eq('status', filter);
+    if (branchFilter) q = q.eq('branch_id', branchFilter);
     if (from) q = q.gte('created_at', new Date(from).toISOString());
     if (to) {
       const end = new Date(to);
@@ -55,7 +94,7 @@ export default function AdminOrders() {
     const { data } = await q;
     setOrders((data as Order[]) ?? []);
     setLoading(false);
-  }, [filter, from, to]);
+  }, [filter, from, to, branchFilter]);
 
   useEffect(() => {
     load();
@@ -67,6 +106,8 @@ export default function AdminOrders() {
     if (error) return toast.error('تعذّر تحديث الحالة');
     setOrders((p) => p.map((o) => (o.id === id ? { ...o, status } : o)));
     if (prev === 'received' && status !== 'received') decrement();
+    // إشعار العميل (واتساب/Push) — لا ينتظر
+    fetch('/api/notify/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: id }) }).catch(() => {});
     toast.success('تم تحديث حالة الطلب');
   };
 
@@ -160,6 +201,15 @@ export default function AdminOrders() {
             <label className="field-label">إلى تاريخ</label>
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="field py-2.5" />
           </div>
+          {branches.length > 0 && (
+            <div>
+              <label className="field-label">الفرع</label>
+              <select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} className="field py-2.5">
+                <option value="">كل الفروع</option>
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+          )}
         </div>
         <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
           <FilterChip active={filter === 'all'} onClick={() => setFilter('all')}>الكل</FilterChip>
@@ -265,6 +315,34 @@ export default function AdminOrders() {
                           </a>
                         )}
                         {o.notes && <p className="text-ink-muted">ملاحظات: {o.notes}</p>}
+                        {o.delivery_method === 'delivery' && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <span className="text-ink-muted">السائق:</span>
+                            <select
+                              value={o.driver_id ?? ''}
+                              onChange={(e) => assignDriver(o.id, e.target.value)}
+                              className="rounded-xl border-2 border-line bg-white px-2 py-1.5 text-sm font-bold focus:border-brand-red focus:outline-none"
+                            >
+                              <option value="">بدون إسناد</option>
+                              {drivers.map((d) => (
+                                <option key={d.id} value={d.id}>{d.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        {branches.length > 0 && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <span className="text-ink-muted">الفرع:</span>
+                            <select
+                              value={o.branch_id ?? ''}
+                              onChange={(e) => assignBranch(o.id, e.target.value)}
+                              className="rounded-xl border-2 border-line bg-white px-2 py-1.5 text-sm font-bold focus:border-brand-red focus:outline-none"
+                            >
+                              <option value="">الرئيسي</option>
+                              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                            </select>
+                          </div>
+                        )}
                       </div>
 
                       <ul className="divide-y divide-line">

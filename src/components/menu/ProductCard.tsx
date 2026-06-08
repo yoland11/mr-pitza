@@ -3,6 +3,7 @@
 import { Plus, Settings2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 import { useCart } from '@/lib/store/cart';
 import { toast } from '@/lib/store/toast';
 import type { Product } from '@/lib/types';
@@ -31,7 +32,8 @@ export function ProductCard({ product }: { product: Product }) {
   };
 
   return (
-    <article className={cn('card group flex flex-col transition-all hover:-translate-y-1 hover:shadow-card-hover', soldOut && 'opacity-75')}>
+    <article className={cn('card group relative flex flex-col transition-all hover:-translate-y-1 hover:shadow-card-hover', soldOut && 'opacity-75')}>
+      <FavoriteButton productId={product.id} className="absolute left-2 top-2 z-10" />
       <Link href={`/product/${product.id}`} className="relative block aspect-[4/3] overflow-hidden bg-line">
         {product.image_url ? (
           <Image

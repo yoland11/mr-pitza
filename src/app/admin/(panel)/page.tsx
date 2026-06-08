@@ -29,6 +29,7 @@ interface Stats {
   cancelledCount: number;
   topProducts: Ranked[];
   topCategories: Ranked[];
+  topCustomers: Ranked[];
   recent: Order[];
   chart: DayPoint[];
 }
@@ -56,13 +57,14 @@ export default function AdminDashboard() {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const rangeStart = new Date(Math.min(week.getTime(), monthStart.getTime()));
 
-      const [{ data: ranged }, { data: recent }, { data: items }, { data: products }, { data: categories }] =
+      const [{ data: ranged }, { data: recent }, { data: items }, { data: products }, { data: categories }, { data: topProfiles }] =
         await Promise.all([
           supabase.from('orders').select('total, status, created_at').gte('created_at', rangeStart.toISOString()),
           supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(10),
           supabase.from('order_items').select('product_name, product_id, quantity').limit(2000),
           supabase.from('products').select('id, category_id'),
           supabase.from('categories').select('id, name'),
+          supabase.from('profiles').select('full_name, points').order('points', { ascending: false }).limit(5),
         ]);
 
       const orders = (ranged ?? []).map((o) => ({ ...o, total: Number(o.total), t: new Date(o.created_at) }));
@@ -91,6 +93,10 @@ export default function AdminDashboard() {
       const rank = (m: Map<string, number>) =>
         [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, qty]) => ({ name, qty }));
 
+      const topCustomers: Ranked[] = (topProfiles ?? [])
+        .filter((p) => (p.points ?? 0) > 0)
+        .map((p) => ({ name: p.full_name || 'عميل', qty: p.points ?? 0 }));
+
       // رسم 7 أيام
       const chart: DayPoint[] = [];
       for (let i = 6; i >= 0; i--) {
@@ -102,7 +108,7 @@ export default function AdminDashboard() {
 
       setStats({
         todaySales, weekSales, monthSales, todayCount, avgOrder, cancelledCount,
-        topProducts: rank(byProduct), topCategories: rank(byCategory),
+        topProducts: rank(byProduct), topCategories: rank(byCategory), topCustomers,
         recent: (recent as Order[]) ?? [], chart,
       });
       setLoading(false);
@@ -172,6 +178,12 @@ export default function AdminDashboard() {
         {/* الأكثر مبيعاً أقسام */}
         <RankCard title="الأقسام الأكثر مبيعاً" items={stats.topCategories} unit="طلب" />
       </div>
+
+      {stats.topCustomers.length > 0 && (
+        <div className="mt-6">
+          <RankCard title="أكثر العملاء نقاطاً 🏆" items={stats.topCustomers} unit="نقطة" />
+        </div>
+      )}
 
       {/* آخر 10 طلبات */}
       <div className="mt-6 card p-5">

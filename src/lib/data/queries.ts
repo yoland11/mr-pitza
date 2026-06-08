@@ -93,6 +93,23 @@ export async function getCoupons(): Promise<Coupon[]> {
   return (data as Coupon[]) ?? seedCoupons;
 }
 
+/** اقتراحات بيع متقاطع: مشروبات ومقبلات (مع بديل المميّزة) */
+export async function getCrossSell(excludeIds: string[] = [], limit = 6): Promise<Product[]> {
+  const all = await getProducts();
+  const complementSlugs = ['drinks', 'sides'];
+  const complementCatIds = all
+    .map((p) => p.category)
+    .filter((c): c is NonNullable<typeof c> => !!c && complementSlugs.includes(c.slug))
+    .map((c) => c.id);
+  let list = all.filter(
+    (p) => p.is_available && !excludeIds.includes(p.id) && complementCatIds.includes(p.category_id),
+  );
+  if (list.length === 0) {
+    list = all.filter((p) => p.is_available && p.is_featured && !excludeIds.includes(p.id));
+  }
+  return list.slice(0, limit);
+}
+
 export async function getApprovedReviews(limit = 8): Promise<Review[]> {
   if (!isSupabaseConfigured) return [];
   const supabase = await createServerSupabase();
